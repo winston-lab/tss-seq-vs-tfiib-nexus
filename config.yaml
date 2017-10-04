@@ -1,0 +1,90 @@
+genome:
+    chrsizes : ../genome/S_cerevisiae.R64-2-1.chrsizes-STRANDED.tsv
+    transcripts : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
+    orfs : ../genome/annotations/Scer_nondubious_ORFs.bed
+    prefix : "Scer_"
+
+tfiib-dir:
+    libsizenorm: ../chipnexus-tfiib/coverage/libsizenorm/
+    spikenorm: ../chipnexus-tfiib/coverage/spikenorm/
+tss-dir:
+    libsizenorm: ../tss-seq/coverage/libsizenorm/
+    spikenorm: ../tss-seq/coverage/spikenorm/
+
+tss-windowsize: 30 #windowsize for tss is +/- the tss
+tfiib-upstream: 120 #windowsize for tfiib is - the tss
+
+samples:
+    YPD-1:
+        tss:
+            libsizenorm: YPD-1-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: YPD-1-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: YPD-1-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: YPD-1-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "YPD"
+    YPD-2:
+        tss:
+            libsizenorm: YPD-2-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: YPD-2-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: YPD-2-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: YPD-2-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "YPD"
+    diamide-1:
+        tss:
+            libsizenorm: diamide-1-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: diamide-1-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: diamide-1-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: diamide-1-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "diamide"
+    diamide-2:
+        tss:
+            libsizenorm: diamide-2-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: diamide-2-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: diamide-2-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: diamide-2-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "diamide"
+    WT-37-1:
+        tss:
+            libsizenorm: WT-37-1-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: WT-37-1-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: WT-37-1-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: WT-37-1-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "WT-37"
+    WT-37-2:
+        tss:
+            libsizenorm: WT-37-2-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: WT-37-2-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: WT-37-2-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: WT-37-2-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "WT-37"
+    spt6-37-1:
+        tss:
+            libsizenorm: spt6-37-2-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: spt6-37-2-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: spt6-37-1-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: spt6-37-1-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "spt6-37"
+    spt6-37-2:
+        tss:
+            libsizenorm: spt6-37-2-tss-libsizenorm-SENSE.bedgraph
+            spikenorm: spt6-37-2-tss-spikenorm-SENSE.bedgraph
+        tfiib:
+            libsizenorm: spt6-37-2-tfiib-chipnexus-qfrags-libsizenorm.bedgraph
+            spikenorm: spt6-37-2-tfiib-chipnexus-qfrags-spikenorm.bedgraph
+        # group: "spt6-37"
+
+# comparisons:
+#     conditions:
+#         - "diamide"
+#         - "spt6-37"
+#     controls:
+#         - "YPD"
+#         - "WT-37"
+
