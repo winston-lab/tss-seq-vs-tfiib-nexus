@@ -2,73 +2,55 @@
 
 configfile: "config.yaml"
 
-SAMPLES = config["samples"]
+CONDITIONS = config["conditions"] + config["controls"]
+# COMPARISONS = config["comparisons"]
+CATEGORIES = ["genic", "intragenic", "antisense", "convergent", "divergent", "intergenic"]
+
+localrules: all,
+    make_peak_tables, cat_peaks, plot_peaks
+
 
 rule all:
     input:
-        expand("tss-v-tfiib-{norm}.png", norm=["libsizenorm","spikenorm"])
+        expand("tables/{condition}-tfiib-upstr-tss-{category}.tsv", condition=CONDITIONS, category=CATEGORIES+["all"]),
+        "tables/all-tfiib-upstr-tss.tsv",
+        "figures/peaks-tss-v-tfiib-overlap-mosaic.svg",
 
-rule build_tss_regions:
+rule make_peak_tables:
     input:
-        transcripts = config["genome"]["transcripts"],
+        tss_peaks = lambda wildcards: config["tss"]["peaks-path"] + wildcards.condition + "-exp-idrpeaks.narrowPeak" if wildcards.category=="all" else config["tss"]["peaks-path"] + wildcards.category + "/" + wildcards.condition + "-exp-idrpeaks-" + wildcards.category + ".tsv",
+        tss_coverage = lambda wildcards: config["tss"]["coverage"] + config["tss"]["norm"] + "/" + wildcards.condition + "-1-tss-" + config["tss"]["norm"] + "-SENSE.bedgraph",
+        tfiib_peaks = lambda wildcards: config["nexus"]["peaks-path"] + wildcards.condition + "-" + config["genome"]["prefix"] + "_peaks.narrowPeak",
+        tfiib_coverage = lambda wildcards: config["nexus"]["coverage"] + config["nexus"]["norm"] + "/" + wildcards.condition + "-1-tfiib-chipnexus-" + config["nexus"]["norm"] + "-combined.bedgraph",
         chrsizes = config["genome"]["chrsizes"]
+    params: upstr = config["tss-upstr-dist"]
     output:
-        "tss-regions.bed"
+        "tables/{condition}-tfiib-upstr-tss-{category}.tsv"
+    shell: """
+        cut -f1-10 {input.tss_peaks} | awk 'BEGIN{{FS=OFS="\t"}}$6=="+"{{$1=$1"-plus"; print $0}}$6=="-"{{$1=$1"-minus"; print $0}}' | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tss_coverage} -c 4 -o sum | sed "s/-minus//g;s/-plus//g" | sort -k1,1 -k2,2n | paste <(sort -k1,1 -k2,2n {input.tss_peaks} | bedtools flank -i stdin -g {input.chrsizes} -l {params.upstr} -r 0 -s | cut -f1-3) - | sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tfiib_coverage} -c 4 -o sum | bedtools intersect -a stdin -b {input.tfiib_peaks} -wao | cut --complement -f1-3,7,8,10,11,16,19,20,21,23 | awk -v condition={wildcards.condition} -v category={wildcards.category} 'BEGIN{{FS=OFS="\t"}}{{print $0, condition, category}}' > {output}
+        """
+
+rule cat_peaks:
+    input:
+        expand("tables/{condition}-tfiib-upstr-tss-{category}.tsv", condition=CONDITIONS, category=CATEGORIES+["all"])
+    output:
+        "tables/all-tfiib-upstr-tss.tsv"
+    shell: """
+        cat <(echo -e "chrom\ttss_start\ttss_end\tstrand\ttss_idr\ttss_summit\ttss_expression\ttfiib_levels\ttfiib_start\ttfiib_end\ttfiib_enrichment\ttfiib_qval\ttfiib_summit\toverlap\tcondition\tcategory") {input} > {output}
+        """
+
+rule plot_peaks:
+    input:
+        "tables/all-tfiib-upstr-tss.tsv"
     params:
-        windowsize = config["tss-windowsize"]
-    shell: """
-        bash scripts/makeStrandedBed.sh {input.transcripts} | awk 'BEGIN{{FS=OFS="\t"}} $6=="+"{{print $1, $2, $2+1, $4, $5, $6}}$6=="-"{{print $1, $3-1, $3, $4, $5, $6}}' | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools slop -b {params.windowsize} -g {input.chrsizes} -s -i stdin | LC_COLLATE=C sort -k1,1 -k2,2n > {output}
-        """
-
-#build BED file of regions upstream of TSS peaks to map TFIIB signal to
-rule build_tfiib_regions:
-    input:
-        transcripts = config["genome"]["transcripts"],
-        chrsizes = config["genome"]["chrsizes"]
+        dist = config["tss-upstr-dist"]
     output:
-        "tfiib-regions.bed"
-    params:
-        upstr = config["tfiib-upstream"]
-    shell: """
-        awk 'BEGIN{{FS=OFS="\t"}} $6=="+"{{print $1, $2, $2+1, $4, $5, $6}}$6=="-"{{print $1, $3-1, $3, $4, $5, $6}}' {input.transcripts} | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools slop -l {params.upstr} -r 0 -s -g {input.chrsizes} -i stdin | LC_COLLATE=C sort -k1,1 -k2,2n > {output}
-        """
+        mosaic = "figures/peaks-tss-v-tfiib-overlap-mosaic.svg",
+        tss_expr = "figures/peaks-tss-v-tfiib-tss-expression.svg",
+        tss_size = "figures/peaks-tss-v-tfiib-tss-sizes.svg",
+        tss_idr = "figures/peaks-tss-v-tfiib-tss-idr.svg",
+        tfiib_lvl = "figures/peaks-tss-v-tfiib-tfiib-levels.svg",
+        contour = "figures/peaks-tss-v-tfiib-expression-contourplot.svg",
+        scatter = "figures/peaks-tss-v-tfiib-expression-scatter.svg"
+    script: "scripts/tss-v-tfiib.R"
 
-rule map_tss:
-    input:
-        bed = lambda wildcards: "tss-regions.bed" if wildcards.assay=="tss" else "tfiib-regions.bed",
-        bg = lambda wildcards: config["tss-dir"][wildcards.norm] + SAMPLES[wildcards.sample]["tss"][wildcards.norm] if wildcards.assay=="tss" else config["tfiib-dir"][wildcards.norm] + SAMPLES[wildcards.sample]["tfiib"][wildcards.norm]
-    output:
-        temp("data/{sample}-{norm}-{assay}.tsv")
-    shell: """
-        bedtools map -a {input.bed} -b {input.bg} -c 4 -o sum | cut -f4,7 | sort -k1,1 | cat <(echo -e "gene\t{wildcards.sample}") - > {output}
-        """
-
-# rule map_tfiib:
-#     input:
-#         bed = "tfiib-regions.bed",
-#         bg = lambda wildcards: config["tfiib-dir"][wildcards.norm] + SAMPLES[wildcards.sample]["tfiib"][wildcards.norm]
-#     output:
-#         temp("data/{sample}-{norm}-tfiib.tsv")
-#     shell: """
-#         bedtools map -a {input.bed} -b {input.bg} -c 4 -o sum | cut -f4,7 | sort -k1,1 | cat <(echo -e "gene\t{wildcards.sample}") - > {output}
-#         """
-
-rule paste_data:
-    input:
-        expand("data/{sample}-{{norm}}-{{assay}}.tsv", sample=SAMPLES)
-    output:
-        "data/allsamples-{norm}-{assay}.tsv"
-    params:
-        n = 2*len(SAMPLES)
-    shell: """
-        paste {input} | cut -f$(paste -d, <(echo "1") <(seq -s, 2 2 {params.n})) > {output}
-        """
-
-rule plot:
-    input:
-        tss = "data/allsamples-{norm}-tss.tsv",
-        tfiib = "data/allsamples-{norm}-tfiib.tsv"
-    output:
-        plot = "tss-v-tfiib-{norm}.png"
-    script:
-        "scripts/tss-v-tfiib.R"
