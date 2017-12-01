@@ -4,7 +4,7 @@ genome:
     #orfs : ../genome/annotations/Scer_nondubious_ORFs.bed
     prefix : "Scer_"
 
-tss-upstr-dist: 300 #distance upstream of TSS peaks to look for overlapping nexus peaks
+tss-upstr-dist: 200 #distance upstream of TSS peaks to look for overlapping nexus peaks
 
 tss:
     peaks-path: ../tss-seq/peakcalling/

@@ -3,18 +3,20 @@
 configfile: "config.yaml"
 
 CONDITIONS = config["conditions"] + config["controls"]
-# COMPARISONS = config["comparisons"]
 CATEGORIES = ["genic", "intragenic", "antisense", "convergent", "divergent", "intergenic"]
 
 localrules: all,
     make_peak_tables, cat_peaks, plot_peaks
-
 
 rule all:
     input:
         expand("tables/{condition}-tfiib-upstr-tss-{category}.tsv", condition=CONDITIONS, category=CATEGORIES+["all"]),
         "tables/all-tfiib-upstr-tss.tsv",
         "figures/peaks-tss-v-tfiib-overlap-mosaic.svg",
+        expand(expand("diffexp_tables/{condition}-v-{control}-tfiib-upstr-tss-{{category}}.tsv", zip, condition=config["conditions"], control=config["controls"]), category=CATEGORIES+["all"]),
+        "diffexp_tables/all-diffexp-tfiib-upstr-tss.tsv",
+        "figures/tss-v-tfiib-diffexp-scatter.svg",
+        expand("tables/bed/{condition}-tss-{zz}-tfiib-upstr.bed", condition=CONDITIONS, zz = ["with", "without"])
 
 rule make_peak_tables:
     input:
@@ -30,6 +32,14 @@ rule make_peak_tables:
         cut -f1-10 {input.tss_peaks} | awk 'BEGIN{{FS=OFS="\t"}}$6=="+"{{$1=$1"-plus"; print $0}}$6=="-"{{$1=$1"-minus"; print $0}}' | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tss_coverage} -c 4 -o sum | sed "s/-minus//g;s/-plus//g" | sort -k1,1 -k2,2n | paste <(sort -k1,1 -k2,2n {input.tss_peaks} | bedtools flank -i stdin -g {input.chrsizes} -l {params.upstr} -r 0 -s | cut -f1-3) - | sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tfiib_coverage} -c 4 -o sum | bedtools intersect -a stdin -b {input.tfiib_peaks} -wao | cut --complement -f1-3,7,8,10,11,16,19,20,21,23 | awk -v condition={wildcards.condition} -v category={wildcards.category} 'BEGIN{{FS=OFS="\t"}}{{print $0, condition, category}}' > {output}
         """
 
+rule get_bed:
+    input:
+        "tables/{condition}-tfiib-upstr-tss-all.tsv"
+    output:
+        yes = "tables/bed/{condition}-tss-with-tfiib-upstr.bed",
+        no = "tables/bed/{condition}-tss-without-tfiib-upstr.bed",
+    script: "scripts/getbed.R"
+
 rule cat_peaks:
     input:
         expand("tables/{condition}-tfiib-upstr-tss-{category}.tsv", condition=CONDITIONS, category=CATEGORIES+["all"])
@@ -38,6 +48,7 @@ rule cat_peaks:
     shell: """
         cat <(echo -e "chrom\ttss_start\ttss_end\tstrand\ttss_idr\ttss_summit\ttss_expression\ttfiib_levels\ttfiib_start\ttfiib_end\ttfiib_enrichment\ttfiib_qval\ttfiib_summit\toverlap\tcondition\tcategory") {input} > {output}
         """
+
 
 rule plot_peaks:
     input:
@@ -53,4 +64,46 @@ rule plot_peaks:
         contour = "figures/peaks-tss-v-tfiib-expression-contourplot.svg",
         scatter = "figures/peaks-tss-v-tfiib-expression-scatter.svg"
     script: "scripts/tss-v-tfiib.R"
+
+rule make_diffexp_tables_all:
+    input:
+        tss = lambda wildcards: config["tss"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.condition + "-v-" + wildcards.control + "-results-" + config["tss"]["norm"] + "-all.tsv",
+        nexus = lambda wildcards: config["nexus"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.condition + "-v-" + wildcards.control + "-tfiib-chipnexus-results-" + config["nexus"]["norm"] + "-all.tsv",
+        chrsizes = config["genome"]["chrsizes"]
+    params: upstr = config["tss-upstr-dist"]
+    output:
+        "diffexp_tables/{condition}-v-{control}-tfiib-upstr-tss-all.tsv"
+    shell: """
+        tail -n +2 {input.tss} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, 0, $3, $6, $7, $11, $12, $13, "na", "na", "na"}}' | sort -k1,1 -k2,2n | paste <(tail -n +2 {input.tss} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, 0, $3}}' | sort -k1,1 -k2,2n | bedtools flank -i stdin -g {input.chrsizes} -l {params.upstr} -r 0 -s | cut -f1-3) - | bedtools intersect -a stdin -b <(tail -n +2 {input.nexus} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, 0, $3, $6, $7, $8, $9, $10, $11, $12, $13}}' | sort -k1,1 -k2,2n) -wao | cut --complement -f1-3,8,18,22,23,26-28 | awk -v condition={wildcards.condition} -v control={wildcards.control} 'BEGIN{{FS=OFS="\t"}}{{print $0, condition, control, "all"}}' > {output}
+        """
+
+rule make_diffexp_tables_category:
+    input:
+        tss = lambda wildcards: config["tss"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.category + "/" + wildcards.condition + "-v-" + wildcards.control + "-results-" +     config["nexus"]["norm"] + "-all-" + wildcards.category + ".tsv",
+        nexus = lambda wildcards: config["nexus"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.condition + "-v-" + wildcards.control + "-tfiib-chipnexus-results-" + config["nexus"]["norm"] + "-all.tsv",
+        chrsizes = config["genome"]["chrsizes"]
+    params:
+        upstr = config["tss-upstr-dist"]
+    output:
+        "diffexp_tables/{condition}-v-{control}-tfiib-upstr-tss-{category}.tsv"
+    shell: """
+        tail -n +2 {input.tss} | awk -v ttype={wildcards.category} 'BEGIN{{FS=OFS="\t"}} ttype=="intergenic"{{$13="na"}}{{print $2, $4, $5, $1, 0, $3, $6, $7, $8, $9, $10, $11, $12, $13}}' | sort -k1,1 -k2,2n | paste <(tail -n +2 {input.tss} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, 0, $3}}' | sort -k1,1 -k2,2n | bedtools flank -i stdin -g {input.chrsizes} -l {params.upstr} -r 0 -s | cut -f1-3) - | bedtools intersect -a stdin -b <(tail -n +2 {input.nexus} | awk 'BEGIN{{FS=OFS="\t"}}{{print $2, $4, $5, $1, 0, $3, $6, $7, $8, $9, $10, $11, $12, $13}}' | sort -k1,1 -k2,2n) -wao | cut --complement -f1-3,8,18,22,23,26-28 | awk -v category={wildcards.category} -v condition={wildcards.condition} -v control={wildcards.control} 'BEGIN{{FS=OFS="\t"}}{{print $0, condition, control, category}}' > {output}
+        """
+
+rule cat_diffexp:
+    input:
+        expand(expand("diffexp_tables/{condition}-v-{control}-tfiib-upstr-tss-{{category}}.tsv", zip, condition=config["conditions"], control=config["controls"]), category=CATEGORIES+["all"])
+    output:
+        "diffexp_tables/all-diffexp-tfiib-upstr-tss.tsv"
+    shell: """
+        cat <(echo -e "chrom\ttss_start\ttss_end\ttss_name\tstrand\ttss_meanExpr\ttss_lfc\ttss_logpadj\ttss_cond\ttss_ctrl\tfeat_start\tfeat_end\tfeat_name\ttfiib_start\ttfiib_end\ttfiib_name\ttfiib_meanExpr\ttfiib_lfc\ttfiib_logpadj\ttfiib_cond\ttfiib_ctrl\toverlap\tcondition\tcontrol\tcategory") {input} > {output}
+        """
+
+rule plot_diffexp:
+    input:
+        "diffexp_tables/all-diffexp-tfiib-upstr-tss.tsv"
+    output:
+        scatter = "figures/tss-v-tfiib-diffexp-scatter.svg"
+    script: "scripts/tss-v-tfiib-diffexp.R"
+
 
