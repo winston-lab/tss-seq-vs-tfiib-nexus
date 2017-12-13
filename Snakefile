@@ -16,7 +16,9 @@ rule all:
         expand(expand("diffexp_tables/{condition}-v-{control}-tfiib-upstr-tss-{{category}}.tsv", zip, condition=config["conditions"], control=config["controls"]), category=CATEGORIES+["all"]),
         "diffexp_tables/all-diffexp-tfiib-upstr-tss.tsv",
         "figures/tss-v-tfiib-diffexp-scatter.svg",
-        expand("tables/bed/{condition}-tss-{zz}-tfiib-upstr.bed", condition=CONDITIONS, zz = ["with", "without"])
+        expand("tables/bed/{condition}-tss-{zz}-tfiib-upstr.bed", condition=CONDITIONS, zz = ["with", "without"]),
+        expand("figures/heatmaps/{condition}-both.tsv.gz", condition=CONDITIONS),
+        expand("figures/heatmaps/{condition}-heatmap.svg", condition=CONDITIONS)
 
 rule make_peak_tables:
     input:
@@ -32,14 +34,6 @@ rule make_peak_tables:
         cut -f1-10 {input.tss_peaks} | awk 'BEGIN{{FS=OFS="\t"}}$6=="+"{{$1=$1"-plus"; print $0}}$6=="-"{{$1=$1"-minus"; print $0}}' | LC_COLLATE=C sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tss_coverage} -c 4 -o sum | sed "s/-minus//g;s/-plus//g" | sort -k1,1 -k2,2n | paste <(sort -k1,1 -k2,2n {input.tss_peaks} | bedtools flank -i stdin -g {input.chrsizes} -l {params.upstr} -r 0 -s | cut -f1-3) - | sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tfiib_coverage} -c 4 -o sum | bedtools intersect -a stdin -b {input.tfiib_peaks} -wao | cut --complement -f1-3,7,8,10,11,16,19,20,21,23 | awk -v condition={wildcards.condition} -v category={wildcards.category} 'BEGIN{{FS=OFS="\t"}}{{print $0, condition, category}}' > {output}
         """
 
-rule get_bed:
-    input:
-        "tables/{condition}-tfiib-upstr-tss-all.tsv"
-    output:
-        yes = "tables/bed/{condition}-tss-with-tfiib-upstr.bed",
-        no = "tables/bed/{condition}-tss-without-tfiib-upstr.bed",
-    script: "scripts/getbed.R"
-
 rule cat_peaks:
     input:
         expand("tables/{condition}-tfiib-upstr-tss-{category}.tsv", condition=CONDITIONS, category=CATEGORIES+["all"])
@@ -48,7 +42,6 @@ rule cat_peaks:
     shell: """
         cat <(echo -e "chrom\ttss_start\ttss_end\tstrand\ttss_idr\ttss_summit\ttss_expression\ttfiib_levels\ttfiib_start\ttfiib_end\ttfiib_enrichment\ttfiib_qval\ttfiib_summit\toverlap\tcondition\tcategory") {input} > {output}
         """
-
 
 rule plot_peaks:
     input:
@@ -79,7 +72,7 @@ rule make_diffexp_tables_all:
 
 rule make_diffexp_tables_category:
     input:
-        tss = lambda wildcards: config["tss"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.category + "/" + wildcards.condition + "-v-" + wildcards.control + "-results-" +     config["nexus"]["norm"] + "-all-" + wildcards.category + ".tsv",
+        tss = lambda wildcards: config["tss"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.category + "/" + wildcards.condition + "-v-" + wildcards.control + "-results-" + config["nexus"]["norm"] + "-all-" + wildcards.category + ".tsv",
         nexus = lambda wildcards: config["nexus"]["diffexp-path"] + wildcards.condition + "-v-" + wildcards.control + "/" + wildcards.condition + "-v-" + wildcards.control + "-tfiib-chipnexus-results-" + config["nexus"]["norm"] + "-all.tsv",
         chrsizes = config["genome"]["chrsizes"]
     params:
@@ -105,5 +98,74 @@ rule plot_diffexp:
     output:
         scatter = "figures/tss-v-tfiib-diffexp-scatter.svg"
     script: "scripts/tss-v-tfiib-diffexp.R"
+
+rule get_bed:
+    input:
+        "tables/{condition}-tfiib-upstr-tss-all.tsv"
+    output:
+        yes = "tables/bed/{condition}-tss-with-tfiib-upstr.bed",
+        no = "tables/bed/{condition}-tss-without-tfiib-upstr.bed",
+    script: "scripts/getbed.R"
+
+rule deeptools_matrix:
+    input:
+        annotation = "tables/bed/{condition}-tss-{class}-tfiib-upstr.bed",
+        bw = lambda wildcards: config["nexus"]["coverage"] + config["nexus"]["norm"] + "/bw/" + wildcards.condition + "-1-tfiib-chipnexus-" + config["nexus"]["norm"] + "-qfrags.bw",
+    output:
+        dtfile = temp("figures/heatmaps/{condition}-{class}.mat"),
+        matrix = temp("figures/heatmaps/{condition}-{class}.tsv")
+    params:
+        refpoint = "TSS",
+        upstream = config["heatmaps"]["upstream"],
+        dnstream = config["heatmaps"]["downstream"],
+        binsize = config["heatmaps"]["binsize"],
+        sort = "keep",
+        binstat = config["heatmaps"]["binstat"]
+    threads : config["threads"]
+    log: "logs/deeptools_matrix-{condition}-{class}.log"
+    shell: """
+        (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --averageTypeBins {params.binstat} -p {threads}) &> {log}
+        """
+
+rule gzip_deeptools_matrix:
+    input:
+        matrix = "figures/heatmaps/{condition}-{class}.tsv"
+    output:
+        "figures/heatmaps/{condition}-{class}.tsv.gz"
+    shell: """
+        pigz -f {input}
+        """
+
+rule melt_matrix:
+    input:
+        matrix = "figures/heatmaps/{condition}-{class}.tsv.gz"
+    output:
+        temp("figures/heatmaps/{condition}-{class}-melted.tsv.gz")
+    params:
+        binsize = config["heatmaps"]["binsize"],
+        upstream = config["heatmaps"]["upstream"],
+    script:
+        "scripts/melt_matrix.R"
+
+rule cat_matrices:
+    input:
+        expand("figures/heatmaps/{{condition}}-{zz}-melted.tsv.gz", zz=["with","without"])
+    output:
+        "figures/heatmaps/{condition}-both.tsv.gz"
+    shell: """
+        cat {input} > {output}
+        """
+
+rule plot_heatmaps:
+    input:
+        "figures/heatmaps/{condition}-both.tsv.gz"
+    output:
+        "figures/heatmaps/{condition}-heatmap.svg"
+    params:
+        cutoff=config["heatmaps"]["pct_cutoff"],
+        upstream=config["heatmaps"]["upstream"],
+        dnstream=config["heatmaps"]["downstream"],
+        cmap=config["heatmaps"]["colormap"]
+    script: "scripts/plotHeatmaps.R"
 
 

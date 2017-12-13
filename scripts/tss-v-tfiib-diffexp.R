@@ -22,7 +22,7 @@ scatter = ggplot(data = df, aes(x=tss_lfc, y=tfiib_lfc)) +
             #geom_point(alpha=0.5) +
             #geom_smooth(method="lm", color="black", size=0.5) +
             stat_bin_hex(geom="point", aes(color=log10(..count..)),
-                         binwidth=c(0.1,0.1), shape=16, size=0.15, alpha=0.8) +
+                         binwidth=c(0.1,0.1), shape=16, size=0.15, alpha=0.8, stroke=0) +
             scale_color_viridis(option="inferno", guide=FALSE) +
             xlab(expression(bold(paste("TSS-seq ", log[2]~frac(condition, control))))) +
             ylab(expression(bold(paste("TFIIB ChIP-nexus ", log[2]~frac(condition, control))))) +

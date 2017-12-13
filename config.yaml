@@ -24,17 +24,12 @@ controls:
     - YPD
     - WT-37
 
-    # diamide-v-YPD:
-    #     tss:
-    #         path: ../tss-seq/diff_exp/diamide-v-YPD
-    #         norm: spikenorm 
-    #     tfiib:
-    #         path: ../chipnexus-tfiib/diff_binding/diamide-v-YPD
-    #         norm: libsizenorm
-    # spt6-37-v-WT-37:
-    #     tss:
-    #         path: ../tss-seq/diff_exp/spt6-37-v-WT-37
-    #         norm: spikenorm
-    #     tfiib:
-    #         path: ../chipnexus-tfiib/diff_binding/spt6-37-v-WT-37
-    #         norm: libsizenorm
+heatmaps:
+    upstream: 300
+    downstream: 100
+    binsize: 10
+    binstat: mean
+    pct_cutoff: 0.97
+    colormap: inferno
+
+threads: 1
