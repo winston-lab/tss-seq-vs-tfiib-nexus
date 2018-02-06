@@ -150,7 +150,7 @@ main = function(intable, dist, out.mosaic, out.tssexpr, out.tsssize, out.tssidr,
                 geom_smooth(method="lm", size=0.5) +
                 #geom_point(shape=16, alpha=0.6) +
                 stat_bin_hex(geom="point", aes(color=log10(..count..)),
-                             binwidth=c(0.05, 0.05), size=.05, stroke=0) +
+                             binwidth=c(0.05, 0.05), size=.5, stroke=0, shape=16) +
                 scale_color_viridis(option="inferno") +
                 scale_x_log10(name="TSS expression level (normalized counts)") +
                 scale_y_log10(name="TFIIB level (normalized counts)") +

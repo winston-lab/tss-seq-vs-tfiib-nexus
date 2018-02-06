@@ -16,7 +16,7 @@ rule all:
         expand(expand("diffexp_tables/{condition}-v-{control}-tfiib-upstr-tss-{{category}}.tsv", zip, condition=config["conditions"], control=config["controls"]), category=CATEGORIES+["all"]),
         "diffexp_tables/all-diffexp-tfiib-upstr-tss.tsv",
         "figures/tss-v-tfiib-diffexp-scatter.svg",
-        expand("tables/bed/{condition}-tss-{zz}-tfiib-upstr.bed", condition=CONDITIONS, zz = ["with", "without"]),
+        expand("tables/bed/{condition}_{category}-tss-{zz}-tfiib-upstr.bed", condition=CONDITIONS, category=CATEGORIES+["all"], zz = ["with", "without"]),
         expand("figures/heatmaps/{condition}-both.tsv.gz", condition=CONDITIONS),
         expand("figures/heatmaps/{condition}-heatmap.svg", condition=CONDITIONS)
 
@@ -101,19 +101,20 @@ rule plot_diffexp:
 
 rule get_bed:
     input:
-        "tables/{condition}-tfiib-upstr-tss-all.tsv"
+        "tables/{condition}-tfiib-upstr-tss-{category}.tsv"
     output:
-        yes = "tables/bed/{condition}-tss-with-tfiib-upstr.bed",
-        no = "tables/bed/{condition}-tss-without-tfiib-upstr.bed",
+        yes = "tables/bed/{condition}_{category}-tss-with-tfiib-upstr.bed",
+        no = "tables/bed/{condition}_{category}-tss-without-tfiib-upstr.bed",
     script: "scripts/getbed.R"
 
-rule deeptools_matrix:
+rule compute_matrix:
     input:
         annotation = "tables/bed/{condition}-tss-{class}-tfiib-upstr.bed",
         bw = lambda wildcards: config["nexus"]["coverage"] + config["nexus"]["norm"] + "/bw/" + wildcards.condition + "-1-tfiib-chipnexus-" + config["nexus"]["norm"] + "-qfrags.bw",
     output:
         dtfile = temp("figures/heatmaps/{condition}-{class}.mat"),
-        matrix = temp("figures/heatmaps/{condition}-{class}.tsv")
+        matrix = temp("figures/heatmaps/{condition}-{class}.tsv"),
+        matrix_gz = temp("figures/heatmaps/{condition}-{class}.tsv.gz"),
     params:
         refpoint = "TSS",
         upstream = config["heatmaps"]["upstream"],
@@ -122,18 +123,9 @@ rule deeptools_matrix:
         sort = "keep",
         binstat = config["heatmaps"]["binstat"]
     threads : config["threads"]
-    log: "logs/deeptools_matrix-{condition}-{class}.log"
+    log: "logs/compute_matrix-{condition}-{class}.log"
     shell: """
-        (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --averageTypeBins {params.binstat} -p {threads}) &> {log}
-        """
-
-rule gzip_deeptools_matrix:
-    input:
-        matrix = "figures/heatmaps/{condition}-{class}.tsv"
-    output:
-        "figures/heatmaps/{condition}-{class}.tsv.gz"
-    shell: """
-        pigz -f {input}
+        (computeMatrix reference-point -R {input.annotation} -S {input.bw} --referencePoint {params.refpoint} -out {output.dtfile} --outFileNameMatrix {output.matrix} -b {params.upstream} -a {params.dnstream} --binSize {params.binsize} --sortRegions {params.sort} --averageTypeBins {params.binstat} -p {threads}; pigz -fk {output.matrix}) &> {log}
         """
 
 rule melt_matrix:
@@ -167,5 +159,3 @@ rule plot_heatmaps:
         dnstream=config["heatmaps"]["downstream"],
         cmap=config["heatmaps"]["colormap"]
     script: "scripts/plotHeatmaps.R"
-
-
