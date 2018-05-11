@@ -4,3 +4,6 @@ tables/
 diffexp_tables/
 figures/
 logs/
+coverage/
+peak_distances/
+peaks_mapped/

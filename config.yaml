@@ -2,9 +2,12 @@ genome:
     chrsizes : ../genome/S_cerevisiae.R64-2-1.chrsizes.tsv
     #transcripts : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
     #orfs : ../genome/annotations/Scer_nondubious_ORFs.bed
-    prefix : "Scer_"
+    prefix : Scer_
 
-tss-upstr-dist: 200 #distance upstream of TSS peaks to look for overlapping nexus peaks
+#distance in bp to search for corresponding features
+#for TSS-seq, search is done for a TFIIB peak 5'-distance to 3' of the TSS-seq peak
+#for TFIIB, search is done +/- distance
+search-distance: 200
 
 tss:
     peaks-path: ../tss-seq/peakcalling/
@@ -17,19 +20,98 @@ nexus:
     diffexp-path: ../chipnexus-tfiib/diff_binding/
     norm: libsizenorm
 
-conditions:
-    - diamide
-    - spt6-37
-controls:
-    - YPD
-    - WT-37
+groups:
+    WT-37C:
+        tss_peaks:
+            all: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks.narrowPeak
+            genic: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks-genic.tsv
+            intragenic: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks-intragenic.tsv
+            antisense: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks-antisense.tsv
+            convergent: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks-convergent.tsv
+            divergent: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks-divergent.tsv
+            intergenic: ../tss-seq/peakcalling/WT-37C/WT-37C-exp-idrpeaks-intergenic.tsv
+        tss_coverage:
+            - ../tss-seq/coverage/spikenorm/WT-37C-1-tss-spikenorm-SENSE.bedgraph
+            - ../tss-seq/coverage/spikenorm/WT-37C-2-tss-spikenorm-SENSE.bedgraph
+        tfiib_peaks:
+            all: ../chipnexus-tfiib/peakcalling/macs/WT-37C-Scer__peaks.narrowPeak
+            genic: ../chipnexus-tfiib/peakcalling/macs/genic/WT-37C-exp-peaks-genic.tsv
+            intragenic: ../chipnexus-tfiib/peakcalling/macs/intragenic/WT-37C-exp-peaks-intragenic.tsv
+            intergenic: ../chipnexus-tfiib/peakcalling/macs/intergenic/WT-37C-exp-peaks-intergenic.tsv
+        tfiib_coverage:
+            - ../chipnexus-tfiib/coverage/libsizenorm/WT-37C-1_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+            - ../chipnexus-tfiib/coverage/libsizenorm/WT-37C-2_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+    spt6-1004-37C:
+        tss_peaks:
+            all: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks.narrowPeak
+            genic: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks-genic.tsv
+            intragenic: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks-intragenic.tsv
+            antisense: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks-antisense.tsv
+            convergent: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks-convergent.tsv
+            divergent: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks-divergent.tsv
+            intergenic: ../tss-seq/peakcalling/spt6-1004-37C/spt6-1004-37C-exp-idrpeaks-intergenic.tsv
+        tss_coverage:
+            - ../tss-seq/coverage/spikenorm/spt6-1004-37C-1-tss-spikenorm-SENSE.bedgraph
+            - ../tss-seq/coverage/spikenorm/spt6-1004-37C-2-tss-spikenorm-SENSE.bedgraph
+        tfiib_peaks:
+            all: ../chipnexus-tfiib/peakcalling/macs/spt6-1004-37C-Scer__peaks.narrowPeak
+            genic: ../chipnexus-tfiib/peakcalling/macs/genic/spt6-1004-37C-exp-peaks-genic.tsv
+            intragenic: ../chipnexus-tfiib/peakcalling/macs/intragenic/spt6-1004-37C-exp-peaks-intragenic.tsv
+            intergenic: ../chipnexus-tfiib/peakcalling/macs/intergenic/spt6-1004-37C-exp-peaks-intergenic.tsv
+        tfiib_coverage:
+            - ../chipnexus-tfiib/coverage/libsizenorm/spt6-1004-37C-1_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+            - ../chipnexus-tfiib/coverage/libsizenorm/spt6-1004-37C-2_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+    diamide:
+        tss_peaks:
+            all: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks.narrowPeak
+            genic: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks-genic.tsv
+            intragenic: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks-intragenic.tsv
+            antisense: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks-antisense.tsv
+            convergent: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks-convergent.tsv
+            divergent: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks-divergent.tsv
+            intergenic: ../tss-seq/peakcalling/diamide/diamide-exp-idrpeaks-intergenic.tsv
+        tss_coverage:
+            - ../tss-seq/coverage/spikenorm/diamide-1-tss-spikenorm-SENSE.bedgraph
+            - ../tss-seq/coverage/spikenorm/diamide-2-tss-spikenorm-SENSE.bedgraph
+        tfiib_peaks:
+            all: ../chipnexus-tfiib/peakcalling/macs/diamide-Scer__peaks.narrowPeak
+            genic: ../chipnexus-tfiib/peakcalling/macs/genic/diamide-exp-peaks-genic.tsv
+            intragenic: ../chipnexus-tfiib/peakcalling/macs/intragenic/diamide-exp-peaks-intragenic.tsv
+            intergenic: ../chipnexus-tfiib/peakcalling/macs/intergenic/diamide-exp-peaks-intergenic.tsv
+        tfiib_coverage:
+            - ../chipnexus-tfiib/coverage/libsizenorm/diamide-1_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+            - ../chipnexus-tfiib/coverage/libsizenorm/diamide-2_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+    YPD:
+        tss_peaks:
+            all: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks.narrowPeak
+            genic: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks-genic.tsv
+            intragenic: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks-intragenic.tsv
+            antisense: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks-antisense.tsv
+            convergent: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks-convergent.tsv
+            divergent: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks-divergent.tsv
+            intergenic: ../tss-seq/peakcalling/YPD/YPD-exp-idrpeaks-intergenic.tsv
+        tss_coverage:
+            - ../tss-seq/coverage/spikenorm/YPD-1-tss-spikenorm-SENSE.bedgraph
+            - ../tss-seq/coverage/spikenorm/YPD-2-tss-spikenorm-SENSE.bedgraph
+        tfiib_peaks:
+            all: ../chipnexus-tfiib/peakcalling/macs/YPD-Scer__peaks.narrowPeak
+            genic: ../chipnexus-tfiib/peakcalling/macs/genic/YPD-exp-peaks-genic.tsv
+            intragenic: ../chipnexus-tfiib/peakcalling/macs/intragenic/YPD-exp-peaks-intragenic.tsv
+            intergenic: ../chipnexus-tfiib/peakcalling/macs/intergenic/YPD-exp-peaks-intergenic.tsv
+        tfiib_coverage:
+            - ../chipnexus-tfiib/coverage/libsizenorm/YPD-1_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
+            - ../chipnexus-tfiib/coverage/libsizenorm/YPD-2_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
 
-heatmaps:
-    upstream: 300
-    downstream: 100
-    binsize: 10
-    binstat: mean
-    pct_cutoff: 0.97
-    colormap: inferno
+comparisons:
+    spt6-1004-37C: WT-37C
+    diamide: YPD
 
-threads: 1
+# heatmaps:
+#     upstream: 300
+#     downstream: 100
+#     binsize: 10
+#     binstat: mean
+#     pct_cutoff: 0.97
+#     colormap: inferno
+
+# threads: 1
