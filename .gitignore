@@ -1,9 +1,9 @@
 .snakemake/
 Rplots.pdf
-tables/
-diffexp_tables/
-figures/
 logs/
-coverage/
 peak_distances/
 peaks_mapped/
+bins_mapped/
+signal_regions/
+signal_region_distances/
+diff_binding/
