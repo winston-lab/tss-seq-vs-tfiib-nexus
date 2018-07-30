@@ -1,12 +1,13 @@
 genome:
-    chrsizes : ../genome/S_cerevisiae.R64-2-1.chrsizes.tsv
+    fasta : ../genome/S_cerevisiae.R64-2-1.fa
+    annotation_workflow: ../build-annotations-cerevisiae/
     transcripts : ../genome/annotations/Scer_polIItranscripts-adjustedTSS.bed
-    genic_regions: ../genome/annotations/Scer_genic-regions.bed
-    conv_regions: ../genome/annotations/Scer_convergent-regions.bed
-    div_regions: ../genome/annotations/Scer_divergent-regions.bed
-    intergenic_regions: ../genome/annotations/Scer_intergenic-regions.bed
     orfs : ../genome/annotations/Scer_nondubious_ORFs.bed
-    prefix : Scer_
+    prefix: "Scer_"
+    # genic_regions: ../genome/annotations/Scer_genic-regions.bed
+    # conv_regions: ../genome/annotations/Scer_convergent-regions.bed
+    # div_regions: ../genome/annotations/Scer_divergent-regions.bed
+    # intergenic_regions: ../genome/annotations/Scer_intergenic-regions.bed
 
 #distance in bp to search for corresponding features
 #for TSS-seq, search is done for a TFIIB peak 5'-distance to 3' of the TSS-seq peak

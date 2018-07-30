@@ -3,6 +3,9 @@ from math import log2
 
 configfile: "config.yaml"
 
+subworkflow build_annotations:
+    workdir: config["genome"]["annotation_workflow"]
+
 CONTROLS = [v for k,v in config["comparisons"].items()]
 CONDITIONS = [k for k,v in config["comparisons"].items()]
 GROUPS = set(CONDITIONS + CONTROLS)
@@ -10,7 +13,6 @@ CATEGORIES = ["genic", "intragenic", "antisense", "convergent", "divergent", "in
 COMPARISONS = [f"{k}-v-{v}" for k,v in config["comparisons"].items()]
 
 localrules: all,
-    make_peak_tables, cat_peaks, plot_peaks
 
 onsuccess:
     shell("(./mogrify.sh) > mogrify.log")
@@ -145,7 +147,7 @@ rule map_coverage_to_tfiib_peak_bins:
 rule map_coverage_to_background_bins:
     input:
         peaks = lambda wc: config["groups"][wc.group]["tfiib_peaks"]["all"],
-        chrsizes = config["genome"]["chrsizes"],
+        fasta = config["genome"]["fasta"],
         coverage = "coverage/{group}_tfiib-nexus.bedgraph"
     output:
         temp("bins_mapped/{group}_tfiib-nexus-background-bins.tsv")
@@ -153,7 +155,7 @@ rule map_coverage_to_background_bins:
         bin_size = config["bin_size"],
         step_size = config["step_size"],
     shell: """
-        bedtools complement -i {input.peaks} -g <(sort -k1,1 {input.chrsizes}) | bedtools makewindows -w {params.bin_size} -s {params.step_size} -b stdin | bedtools map -a stdin -b {input.coverage} -c 4 -o sum | awk 'BEGIN{{FS=OFS="\t"}}{{print $0, "background"}}' > {output}
+        bedtools complement -i {input.peaks} -g <(faidx {input.fasta} -i chromsizes | sort -k1,1) | bedtools makewindows -w {params.bin_size} -s {params.step_size} -b stdin | bedtools map -a stdin -b {input.coverage} -c 4 -o sum | awk 'BEGIN{{FS=OFS="\t"}}{{print $0, "background"}}' > {output}
         """
 
 rule cat_bin_coverage:
@@ -180,7 +182,7 @@ rule plot_bin_coverage:
 rule get_signal_regions:
     input:
         coverage = "coverage/{group}_tfiib-nexus.bedgraph",
-        chrsizes = config["genome"]["chrsizes"],
+        fasta = config["genome"]["fasta"],
     output:
         "signal_regions/{group}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_{signal_cutoff}.bed"
     params:
@@ -188,21 +190,21 @@ rule get_signal_regions:
         step_size = config["step_size"],
         # signal_cutoff = config["signal_cutoff"]
     shell: """
-        bedtools makewindows -w {params.bin_size} -s {params.step_size} -g <(sort -k1,1 {input.chrsizes}) | bedtools map -a stdin -b {input.coverage} -c 4 -o sum | awk 'BEGIN{{FS=OFS="\t"}} ($4/($3-$2))>{wildcards.signal_cutoff}' | bedtools merge -d {params.bin_size} -c 4 -o mean > {output}
+        bedtools makewindows -w {params.bin_size} -s {params.step_size} -g <(faidx {input.fasta} -i chromsizes | sort -k1,1 ) | bedtools map -a stdin -b {input.coverage} -c 4 -o sum | awk 'BEGIN{{FS=OFS="\t"}} ($4/($3-$2))>{wildcards.signal_cutoff}' | bedtools merge -d {params.bin_size} -c 4 -o mean > {output}
         """
 
 rule calculate_signal_region_sensitivity_specificity:
     input:
         tfiib_regions = "signal_regions/{group}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_{signal_cutoff}.bed",
         tfiib_peaks = lambda wc: config["groups"][wc.group]["tfiib_peaks"]["all"],
-        chrsizes = config["genome"]["chrsizes"],
+        fasta = config["genome"]["fasta"],
     output:
         "signal_regions/{{group}}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_{signal_cutoff}_sensitivity-specificity.tsv"
     params:
         bin_size = config["bin_size"],
         step_size = config["step_size"],
     shell: """
-        bedtools makewindows -w {params.bin_size} -s {params.step_size} -g <(sort -k1,1 {input.chrsizes}) | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_regions}) -loj | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_peaks} | sort -k1,1 -k2,2n) -loj | awk 'BEGIN{{FS=OFS="\t"; TN=FN=FP=TP=0}} {{ if($5==-1) {{$8==-1 ? TN++ : FN++}} else {{$8==-1? FP++ : TP++}} }} END {{print "{wildcards.signal_cutoff}", TN, FN, FP, TP}}' > {output}
+        bedtools makewindows -w {params.bin_size} -s {params.step_size} -g <(faidx {input.fasta} -i chomsizes | sort -k1,1) | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_regions}) -loj | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_peaks} | sort -k1,1 -k2,2n) -loj | awk 'BEGIN{{FS=OFS="\t"; TN=FN=FP=TP=0}} {{ if($5==-1) {{$8==-1 ? TN++ : FN++}} else {{$8==-1? FP++ : TP++}} }} END {{print "{wildcards.signal_cutoff}", TN, FN, FP, TP}}' > {output}
         """
 
 rule cat_sens_spec:
@@ -275,13 +277,13 @@ rule map_tfiib_counts_upstream_of_tss:
     input:
         tss_results = lambda wc: config["diff_exp_and_binding"][wc.condition][wc.control],
         tfiib_counts = lambda wc: config["tfiib_counts"][wc.sample]["path"],
-        chrsizes = config["genome"]["chrsizes"]
+        fasta = config["genome"]["fasta"]
     output:
         "diff_binding/{condition}-v-{control}_{sample}-tfiib-counts.tsv"
     params:
         window_size = config["search-distance"]
     shell: """
-        awk 'BEGIN{{FS=OFS="\t"}}{{$2=$2+$10; $3=$2+1; print $0}}' {input.tss_results} | bedtools slop -i stdin -g {input.chrsizes} -l {params.window_size} -r 0 -s | cut -f1-6 | sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tfiib_counts} -c 4 -o sum | sort -k4,4 | paste <(sort -k4,4 {input.tss_results}) - > {output}
+        awk 'BEGIN{{FS=OFS="\t"}}{{$2=$2+$10; $3=$2+1; print $0}}' {input.tss_results} | bedtools slop -i stdin -g <(faidx {input.fasta} -i chromsizes) -l {params.window_size} -r 0 -s | cut -f1-6 | sort -k1,1 -k2,2n | bedtools map -a stdin -b {input.tfiib_counts} -c 4 -o sum | sort -k4,4 | paste <(sort -k4,4 {input.tss_results}) - > {output}
         """
 
 def get_samples(groups: list):
@@ -289,8 +291,8 @@ def get_samples(groups: list):
 
 rule window_differential_binding:
     input:
-        controls = lambda wc: ["diff_binding/" + wc.condition + "-v-" + wc.control + "_" + sample + "-tfiib-counts.tsv" for sample in get_samples([wc.control])],
-        conditions = lambda wc: ["diff_binding/" + wc.condition + "-v-" + wc.control + "_" + sample + "-tfiib-counts.tsv" for sample in get_samples([wc.condition])],
+        controls = lambda wc: ["diff_binding/{condition}-v-{control}_".format(**wc) + sample + "-tfiib-counts.tsv" for sample in get_samples([wc.control])],
+        conditions = lambda wc: ["diff_binding/{condition}-v-{control}_".format(**wc) + sample + "-tfiib-counts.tsv" for sample in get_samples([wc.condition])],
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv"
     params:
@@ -302,7 +304,7 @@ rule window_differential_binding:
 rule classify_diffbind_genic:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = config["genome"]["genic_regions"]
+        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-genic.tsv",
     shell: """
@@ -312,7 +314,7 @@ rule classify_diffbind_genic:
 rule classify_diffbind_intragenic:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = config["genome"]["genic_regions"],
+        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
         orf_anno = config["genome"]["orfs"]
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-intragenic.tsv",
@@ -333,8 +335,8 @@ rule classify_diffbind_antisense:
 rule classify_diffbind_convergent:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = config["genome"]["genic_regions"],
-        conv_anno = config["genome"]["conv_regions"]
+        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
+        conv_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "convergent-regions.bed"),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-convergent.tsv",
     shell: """
@@ -344,8 +346,8 @@ rule classify_diffbind_convergent:
 rule classify_diffbind_divergent:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = config["genome"]["genic_regions"],
-        div_anno = config["genome"]["div_regions"]
+        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
+        div_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "divergent-regions.bed"),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-divergent.tsv",
     shell: """
@@ -355,9 +357,9 @@ rule classify_diffbind_divergent:
 rule classify_diffbind_intergenic:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        intergenic_anno = config["genome"]["intergenic_regions"],
+        intergenic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "intergenic-regions.bed"),
         transcript_anno = config["genome"]["transcripts"],
-        genic_anno = config["genome"]["genic_regions"],
+        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
         orf_anno = config["genome"]["orfs"]
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-intergenic.tsv",

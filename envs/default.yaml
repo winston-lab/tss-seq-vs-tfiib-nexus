@@ -1,0 +1,30 @@
+name: tss_v_tfiib_nexus
+channels:
+    - bioconda
+    - conda-forge
+    - https://repo.anaconda.com/pkgs/free/linux-64
+    - https://repo.anaconda.com/pkgs/free/noarch
+    - https://repo.anaconda.com/pkgs/pro/linux-64
+    - https://repo.anaconda.com/pkgs/pro/noarch
+    - nodefaults
+
+dependencies:
+    - snakemake=5.2.0
+    - gawk=4.2.1
+    - sed=4.4
+    - pigz=2.3.4
+    - pyfaidx=0.5.4.1
+    - bedtools=2.27.1
+    - r-tidyverse=1.1.1
+    - r-stringi=1.1.7
+    - r-svglite=1.2.1
+    - r-gdtools=0.1.6
+    - r-ggrepel=0.8.0
+    - r-viridis=0.4.0
+    - r-ggthemes=3.4.0
+    - r-gridextra=2.2.1
+    - r-hexbin=1.27.2
+    - bioconductor-deseq2=1.18.1
+    - r-mgcv=1.8
+    - svg2png=4.1.1
+
