@@ -138,7 +138,7 @@ main = function(tfiib_rel_tss_path, tss_rel_tfiib_path, group, max_dist,
                   plot.title = element_text(size=12, face="bold"))
     }
 
-    tfiib_rel_tss_mosaic = mosaic(tfiib_rel_tss_counts, title=paste0(group, ": TFIIB region status upstream of TSS-seq regions"))
+    tfiib_rel_tss_mosaic = mosaic(tfiib_rel_tss_counts, title=paste0(group, ": TFIIB region status upstream of TSS-seq peaks"))
     tss_rel_tfiib_mosaic = ggplot(data = tss_rel_tfiib_counts) +
         geom_col(aes(x=1, y=n, fill=match)) +
         geom_text(aes(x=1, y=y, label=n)) +

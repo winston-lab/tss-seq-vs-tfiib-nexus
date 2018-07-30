@@ -64,7 +64,7 @@ main = function(tfiib_rel_tss_path, tss_rel_tfiib_path, group, max_dist,
     tfiib_rel_tss_first = tfiib_rel_tss %>%
         filter(order==1) %>%
         select(-order) %>%
-        mutate(match = if_else(distance>=-max_dist, TRUE, FALSE))
+        mutate(match = if_else(distance>-max_dist, TRUE, FALSE))
 
     tss_signal_group_match_violin = ggplot(data = tfiib_rel_tss_first,
                                            aes(x=fct_rev(category), y=tss_coverage, fill=match)) +
@@ -89,7 +89,7 @@ main = function(tfiib_rel_tss_path, tss_rel_tfiib_path, group, max_dist,
     tss_rel_tfiib_first = tss_rel_tfiib %>%
         filter(order==1) %>%
         select(-order) %>%
-        mutate(match = if_else(distance<=max_dist, TRUE, FALSE))
+        mutate(match = if_else(distance<max_dist, TRUE, FALSE))
 
     tfiib_signal_group_match_violin = ggplot(data = tss_rel_tfiib_first,
                                              aes(x=fct_rev(category), y=tfiib_coverage, fill=match)) +

@@ -2,7 +2,7 @@ library(tidyverse)
 library(forcats)
 library(viridis)
 
-df = read_tsv(snakemake@input[[1]]) %>% 
+df = read_tsv(snakemake@input[[1]]) %>%
         mutate_at(vars(tfiib_meanExpr, tfiib_lfc, tfiib_logpadj,
                        tfiib_cond, tfiib_ctrl),
                   as.numeric) %>%
