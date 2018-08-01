@@ -199,7 +199,7 @@ rule calculate_signal_region_sensitivity_specificity:
         tfiib_peaks = lambda wc: config["groups"][wc.group]["tfiib_peaks"]["all"],
         fasta = config["genome"]["fasta"],
     output:
-        "signal_regions/{{group}}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_{signal_cutoff}_sensitivity-specificity.tsv"
+        "signal_regions/{group}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_{signal_cutoff}_sensitivity-specificity.tsv"
     params:
         bin_size = config["bin_size"],
         step_size = config["step_size"],
@@ -211,7 +211,7 @@ rule cat_sens_spec:
     input:
         expand("signal_regions/{{group}}_tfiib-signal-regions-binsize_{{binsize}}-stepsize_{{step_size}}-cutoff_{signal_cutoff}_sensitivity-specificity.tsv", signal_cutoff=config['roc_cutoffs'])
     output:
-        "signal_regions/{{group}}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_sensitivity-specificity-all.tsv"
+        "signal_regions/{group}_tfiib-signal-regions-binsize_{binsize}-stepsize_{step_size}-cutoff_sensitivity-specificity-all.tsv"
     shell: """
         cat <(echo -e "cutoff\tTN\tFN\tFP\tTP")  {input} > {output}
         """
