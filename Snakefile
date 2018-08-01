@@ -19,6 +19,7 @@ onsuccess:
 
 rule all:
     input:
+        "config.yaml",
         #mean coverage for each assay
         expand("coverage/{group}_{assay}.bedgraph", group=GROUPS, assay=["tss-seq", "tfiib-nexus"]),
         #peaks called independently for each assay, with coverage mapped to them
@@ -204,7 +205,7 @@ rule calculate_signal_region_sensitivity_specificity:
         bin_size = config["bin_size"],
         step_size = config["step_size"],
     shell: """
-        bedtools makewindows -w {params.bin_size} -s {params.step_size} -g <(faidx {input.fasta} -i chomsizes | sort -k1,1) | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_regions}) -loj | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_peaks} | sort -k1,1 -k2,2n) -loj | awk 'BEGIN{{FS=OFS="\t"; TN=FN=FP=TP=0}} {{ if($5==-1) {{$8==-1 ? TN++ : FN++}} else {{$8==-1? FP++ : TP++}} }} END {{print "{wildcards.signal_cutoff}", TN, FN, FP, TP}}' > {output}
+        bedtools makewindows -w {params.bin_size} -s {params.step_size} -g <(faidx {input.fasta} -i chromsizes | sort -k1,1) | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_regions}) -loj | bedtools intersect -a stdin -b <(cut -f1-3 {input.tfiib_peaks} | sort -k1,1 -k2,2n) -loj | awk 'BEGIN{{FS=OFS="\t"; TN=FN=FP=TP=0}} {{ if($5==-1) {{$8==-1 ? TN++ : FN++}} else {{$8==-1? FP++ : TP++}} }} END {{print "{wildcards.signal_cutoff}", TN, FN, FP, TP}}' > {output}
         """
 
 rule cat_sens_spec:
