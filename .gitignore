@@ -9,3 +9,4 @@ signal_region_distances/
 diff_binding/
 coverage/
 mogrify.log
+config.yaml
