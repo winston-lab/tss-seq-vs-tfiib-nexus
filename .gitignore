@@ -2,6 +2,7 @@
 Rplots.pdf
 logs/
 peak_distances/
+scripts/.snakemake*
 peaks_mapped/
 bins_mapped/
 signal_regions/
