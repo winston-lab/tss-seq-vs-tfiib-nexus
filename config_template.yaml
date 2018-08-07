@@ -1,3 +1,4 @@
+---
 genome:
     fasta : ../genomefiles_cerevisiae/S_cerevisiae.R64-2-1.fa
     annotation_workflow: ../build-annotations-cerevisiae/
