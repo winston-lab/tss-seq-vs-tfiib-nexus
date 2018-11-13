@@ -6,6 +6,8 @@ configfile: "config.yaml"
 subworkflow build_annotations:
     workdir: config["genome"]["annotation_workflow"]
 
+configfile: build_annotations("config.yaml")
+
 CONTROLS = [v for k,v in config["comparisons"].items()]
 CONDITIONS = [k for k,v in config["comparisons"].items()]
 GROUPS = set(CONDITIONS + CONTROLS)
@@ -305,7 +307,7 @@ rule window_differential_binding:
 rule classify_diffbind_genic:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
+        genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-genic.tsv",
     shell: """
@@ -315,8 +317,8 @@ rule classify_diffbind_genic:
 rule classify_diffbind_intragenic:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
-        orf_anno = config["genome"]["orfs"]
+        genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
+        orf_anno = os.path.abspath(build_annotations(config["genome"]["orf_annotation"])),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-intragenic.tsv",
     shell: """
@@ -326,7 +328,7 @@ rule classify_diffbind_intragenic:
 rule classify_diffbind_antisense:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        transcript_anno = config["genome"]["transcripts"]
+        transcript_anno = os.path.abspath(build_annotations(config["genome"]["transcript_annotation"])),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-antisense.tsv",
     shell: """
@@ -336,8 +338,8 @@ rule classify_diffbind_antisense:
 rule classify_diffbind_convergent:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
-        conv_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "convergent-regions.bed"),
+        genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
+        conv_anno = build_annotations("annotations/" + config["genome"]["name"] + "_convergent-regions.bed"),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-convergent.tsv",
     shell: """
@@ -347,8 +349,8 @@ rule classify_diffbind_convergent:
 rule classify_diffbind_divergent:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
-        div_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "divergent-regions.bed"),
+        genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
+        div_anno = build_annotations("annotations/" + config["genome"]["name"] + "_divergent-regions.bed"),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-divergent.tsv",
     shell: """
@@ -358,10 +360,10 @@ rule classify_diffbind_divergent:
 rule classify_diffbind_intergenic:
     input:
         results = "diff_binding/{condition}-v-{control}-tfiib-window-results.tsv",
-        intergenic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "intergenic-regions.bed"),
-        transcript_anno = config["genome"]["transcripts"],
-        genic_anno = build_annotations(os.path.dirname(os.path.abspath(config["genome"]["transcripts"])) + "/" + config["genome"]["prefix"] + "genic-regions.bed"),
-        orf_anno = config["genome"]["orfs"]
+        intergenic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_intergenic-regions.bed"),
+        genic_anno = build_annotations("annotations/" + config["genome"]["name"] + "_genic-regions.bed"),
+        transcript_anno = os.path.abspath(build_annotations(config["genome"]["transcript_annotation"])),
+        orf_anno = os.path.abspath(build_annotations(config["genome"]["orf_annotation"])),
     output:
         "diff_binding/{condition}-v-{control}-tfiib-window-results-intergenic.tsv",
     shell: """
