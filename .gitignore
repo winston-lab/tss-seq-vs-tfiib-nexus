@@ -3,7 +3,7 @@ Rplots.pdf
 logs/
 scripts/.snakemake*
 matched_peaks
-diff_binding/
+window_diff_binding/
 mogrify.log
 config.yaml
 snakemake.err
