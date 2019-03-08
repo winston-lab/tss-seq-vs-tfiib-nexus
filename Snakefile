@@ -42,7 +42,13 @@ wildcard_constraints:
 localrules:
     target,
     match_tfiib_to_tss,
-    match_tss_to_tfiib
+    match_tss_to_tfiib,
+    create_tfiib_windows,
+    map_counts_to_windows,
+    combine_window_counts,
+    differential_binding,
+    reclassify_windows,
+    datavis
 
 onsuccess:
     shell("(./mogrify.sh) > mogrify.log")
@@ -52,7 +58,9 @@ rule target:
         "config.yaml",
         expand(expand("matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{{category}}/{condition}-v-{control}_{{category}}-tss-seq-{{tss_norm}}-tfiib-{{tfiib_norm}}-matched-peaks-distance{{distance}}.tsv", zip, condition=CONDITIONS, control=CONTROLS), category=CATEGORIES, tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"])),
         expand(expand("matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{{category}}/{condition}-v-{control}_{{category}}-tfiib-{{tfiib_norm}}-tss-seq-{{tss_norm}}-matched-peaks-distance{{distance}}.tsv", zip, condition=CONDITIONS, control=CONTROLS), category=["genic", "intragenic", "intergenic"], tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"])),
-        expand(expand("window_diff_binding/{condition}-v-{control}/tss-{{tss_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-window-{{window_size}}-tfiib-chipnexus-{{norm}}-diffbind-results.tsv", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, norm=TFIIB_NORMS, window_size=int(config["window_size"]))
+        expand(expand("window_diff_binding/{condition}-v-{control}/tss-{{tss_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-window-{{window_size}}-tfiib-chipnexus-{{norm}}-diffbind-results.tsv", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, norm=TFIIB_NORMS, window_size=int(config["window_size"])),
+        expand(expand("window_diff_binding/{condition}-v-{control}/tss-{{tss_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-window-{{window_size}}-tfiib-chipnexus-{{norm}}-diffbind-results-{{category}}.tsv", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, norm=TFIIB_NORMS, window_size=int(config["window_size"]), category=CATEGORIES),
+        expand(expand("datavis/{condition}-v-{control}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tfiib-peaks-matched-to-tss-peaks-distance{{distance}}-scatter.svg", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"]))
 
 rule match_tfiib_to_tss:
     input:
@@ -158,4 +166,45 @@ rule differential_binding:
     script:
         "scripts/window_differential_binding.R"
 
+rule reclassify_windows:
+    input:
+        window_results = "window_diff_binding/{condition}-v-{control}/tss-{tss_norm}/{condition}-v-{control}_tss-{tss_norm}-window-{window_size}-tfiib-chipnexus-{norm}-diffbind-results.tsv",
+        classified_peaks = tss_pipe("diff_exp/peaks/{condition}-v-{control}/{tss_norm}/{category}/{condition}-v-{control}_tss-seq-{tss_norm}-peaks-diffexp-results-{category}-all.tsv"),
+    output:
+        "window_diff_binding/{condition}-v-{control}/tss-{tss_norm}/{condition}-v-{control}_tss-{tss_norm}-window-{window_size}-tfiib-chipnexus-{norm}-diffbind-results-{category}.tsv",
+    shell: """
+        tail -n +2 {input.window_results} | \
+        sort -k4,4 | \
+        join -t $'\t' -1 4 -2 1 - <(tail -n +2 {input.classified_peaks} | \
+                                    cut -f1-3,5-15 --complement | \
+                                    sort -k1,1) | \
+        sort -k8,8nr | \
+        cat <(paste <(head -n 1 {input.window_results} | \
+                      cut -f4) \
+                    <(head -n 1 {input.window_results} | \
+                      cut -f4 --complement) \
+                    <(head -n 1 {input.classified_peaks} | \
+                      cut -f1-15 --complement)) - > {output}
+        """
+
+rule datavis:
+    input:
+        matched_tfiib_paths = expand("matched_peaks/{{condition}}-v-{{control}}/tfiib_matched_to_tss/{category}/{{condition}}-v-{{control}}_{category}-tss-seq-{{tss_norm}}-tfiib-{{tfiib_norm}}-matched-peaks-distance{distance}.tsv", category=CATEGORIES, distance=config["search_distance"]),
+        matched_tss_paths = expand("matched_peaks/{{condition}}-v-{{control}}/tss_matched_to_tfiib/{category}/{{condition}}-v-{{control}}_{category}-tfiib-{{tfiib_norm}}-tss-seq-{{tss_norm}}-matched-peaks-distance{distance}.tsv", category=["genic", "intragenic", "intergenic"], distance=config["search_distance"]),
+        window_paths = expand("window_diff_binding/{{condition}}-v-{{control}}/tss-{{tss_norm}}/{{condition}}-v-{{control}}_tss-{{tss_norm}}-window-{window_size}-tfiib-chipnexus-{{tfiib_norm}}-diffbind-results-{category}.tsv", category=CATEGORIES, window_size=config["window_size"])
+    output:
+        tfiib_matched_to_tss = "datavis/{{condition}}-v-{{control}}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{{condition}}-v-{{control}}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tfiib-peaks-matched-to-tss-peaks-distance{distance}-scatter.svg".format(distance=config["search_distance"]),
+        tss_matched_to_tfiib = "datavis/{{condition}}-v-{{control}}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{{condition}}-v-{{control}}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tss-peaks-matched-to-tfiib-peaks-distance{distance}-scatter.svg".format(distance=config["search_distance"]),
+        tss_vs_tfiib_windows = "datavis/{{condition}}-v-{{control}}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{{condition}}-v-{{control}}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tss-peaks-vs-tfiib-window{window_size}-scatter.svg".format(window_size=config["window_size"]),
+        matched_tfiib_mosaic = "datavis/{{condition}}-v-{{control}}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{{condition}}-v-{{control}}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tfiib-peaks-matched-to-tss-peaks-distance{distance}-mosaic.svg".format(distance=config["search_distance"]),
+        matched_tss_mosaic = "datavis/{{condition}}-v-{{control}}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{{condition}}-v-{{control}}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tss-peaks-matched-to-tfiib-peaks-distance{distance}-mosaic.svg".format(distance=config["search_distance"]),
+    params:
+        fdr_cutoff_tss = config["fdr_cutoff_tss"],
+        fdr_cutoff_tfiib = config["fdr_cutoff_tfiib"],
+        window_size = config["window_size"],
+        search_distance = config["search_distance"]
+    conda:
+        "envs/diff_bind_minimal.yaml"
+    script:
+        "scripts/tss_vs_tfiib.R"
 

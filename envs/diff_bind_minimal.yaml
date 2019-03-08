@@ -5,4 +5,7 @@ channels:
 dependencies:
     - bioconductor-deseq2=1.20.0
     - r-tidyverse=1.2.1
+    - r-viridis=0.5.1
+    - r-svglite=1.2.1
+    - r-hexbin=1.27.2
 
