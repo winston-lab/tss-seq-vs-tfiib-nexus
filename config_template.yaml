@@ -1,102 +1,23 @@
 ---
-genome:
-    fasta : ../genomefiles_cerevisiae/S_cerevisiae.R64-2-1.fa
-    annotation_workflow: ../build-annotations-cerevisiae/
-    transcripts : ../genomefiles_cerevisiae/annotations/Scer_polIItranscripts-adjustedTSS.bed
-    orfs : ../genomefiles_cerevisiae/annotations/Scer_nondubious_ORFs_and_blocked_reading_frames.bed
-    prefix: "Scer_"
+tss_workflow: ../tss-seq/
+nexus_workflow: ../chipnexus-tfiib/
+tfiib_workflow: ../chipnexus-tfiib-custom-analysis/
+annotation_workflow: ../build-annotations-cerevisiae/
+
+spike_in_normalization:
+    tss: True
+    tfiib: False
+
+tss_vs_tfiib_comparisons:
+    spt6-1004-37C: WT-37C
+    diamide: YPD
 
 #distance in bp to search for corresponding features
 #for TSS-seq, search is done for a TFIIB peak 5'-distance to 3' of the TSS-seq peak
 #for TFIIB, search is done +/- distance
-search-distance: 200
+search_distance: 200
 
-bin_size: 20
-step_size: 10
-background_quantile: 0.90
-signal_cutoff: 0.081
+window_size: 200
 
-roc_cutoffs:
-    - 0
-    - 0.01
-    - 0.02
-    - 0.03
-    - 0.05
-    - 0.06
-    - 0.08
-    - 0.10
-    - 0.12
-    - 0.13
-    - 0.14
-    - 0.15
-    - 0.16
-    - 0.18
-    - 0.22
-    - 0.30
-    - 0.50
-    - 1.00
-    - 3.00
-
-groups:
-    WT-37C:
-        tss_peaks:
-            all: ../tss-seq-publication/peakcalling/WT-37C/WT-37C_experimental-idrpeaks.narrowPeak
-            genic: ../tss-seq-publication/peakcalling/WT-37C/genic/WT-37C-experimental-idrpeaks-genic.narrowpeak
-            intragenic: ../tss-seq-publication/peakcalling/WT-37C/intragenic/WT-37C-experimental-idrpeaks-intragenic.narrowpeak
-            antisense: ../tss-seq-publication/peakcalling/WT-37C/antisense/WT-37C-experimental-idrpeaks-antisense.narrowpeak
-            convergent: ../tss-seq-publication/peakcalling/WT-37C/convergent/WT-37C-experimental-idrpeaks-convergent.narrowpeak
-            divergent: ../tss-seq-publication/peakcalling/WT-37C/divergent/WT-37C-experimental-idrpeaks-divergent.narrowpeak
-            intergenic: ../tss-seq-publication/peakcalling/WT-37C/intergenic/WT-37C-experimental-idrpeaks-intergenic.narrowpeak
-        tss_coverage:
-            - ../tss-seq-publication/coverage/spikenorm/WT-37C-1_tss-seq-spikenorm-SENSE.bedgraph
-            - ../tss-seq-publication/coverage/spikenorm/WT-37C-2_tss-seq-spikenorm-SENSE.bedgraph
-        tfiib_peaks:
-            all: ../chipnexus-tfiib-publication/peakcalling/macs/WT-37C/WT-37C_experimental-tfiib-chipnexus_peaks.narrowPeak
-            genic: ../chipnexus-tfiib-publication/peakcalling/macs/WT-37C/WT-37C_experimental-tfiib-chipnexus_peaks-genic.tsv
-            intragenic: ../chipnexus-tfiib-publication/peakcalling/macs/WT-37C/WT-37C_experimental-tfiib-chipnexus_peaks-intragenic.tsv
-            intergenic: ../chipnexus-tfiib-publication/peakcalling/macs/WT-37C/WT-37C_experimental-tfiib-chipnexus_peaks-intergenic.tsv
-        tfiib_coverage:
-            - ../chipnexus-tfiib-publication/coverage/libsizenorm/WT-37C-1_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
-            - ../chipnexus-tfiib-publication/coverage/libsizenorm/WT-37C-2_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
-    spt6-1004-37C:
-        tss_peaks:
-            all: ../tss-seq-publication/peakcalling/spt6-1004-37C/spt6-1004-37C_experimental-idrpeaks.narrowPeak
-            genic: ../tss-seq-publication/peakcalling/spt6-1004-37C/genic/spt6-1004-37C-experimental-idrpeaks-genic.narrowpeak
-            intragenic: ../tss-seq-publication/peakcalling/spt6-1004-37C/intragenic/spt6-1004-37C-experimental-idrpeaks-intragenic.narrowpeak
-            antisense: ../tss-seq-publication/peakcalling/spt6-1004-37C/antisense/spt6-1004-37C-experimental-idrpeaks-antisense.narrowpeak
-            convergent: ../tss-seq-publication/peakcalling/spt6-1004-37C/convergent/spt6-1004-37C-experimental-idrpeaks-convergent.narrowpeak
-            divergent: ../tss-seq-publication/peakcalling/spt6-1004-37C/divergent/spt6-1004-37C-experimental-idrpeaks-divergent.narrowpeak
-            intergenic: ../tss-seq-publication/peakcalling/spt6-1004-37C/intergenic/spt6-1004-37C-experimental-idrpeaks-intergenic.narrowpeak
-        tss_coverage:
-            - ../tss-seq-publication/coverage/spikenorm/spt6-1004-37C-1_tss-seq-spikenorm-SENSE.bedgraph
-            - ../tss-seq-publication/coverage/spikenorm/spt6-1004-37C-2_tss-seq-spikenorm-SENSE.bedgraph
-        tfiib_peaks:
-            all: ../chipnexus-tfiib-publication/peakcalling/macs/spt6-1004-37C/spt6-1004-37C_experimental-tfiib-chipnexus_peaks.narrowPeak
-            genic: ../chipnexus-tfiib-publication/peakcalling/macs/spt6-1004-37C/spt6-1004-37C_experimental-tfiib-chipnexus_peaks-genic.tsv
-            intragenic: ../chipnexus-tfiib-publication/peakcalling/macs/spt6-1004-37C/spt6-1004-37C_experimental-tfiib-chipnexus_peaks-intragenic.tsv
-            intergenic: ../chipnexus-tfiib-publication/peakcalling/macs/spt6-1004-37C/spt6-1004-37C_experimental-tfiib-chipnexus_peaks-intergenic.tsv
-        tfiib_coverage:
-            - ../chipnexus-tfiib-publication/coverage/libsizenorm/spt6-1004-37C-1_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
-            - ../chipnexus-tfiib-publication/coverage/libsizenorm/spt6-1004-37C-2_tfiib-chipnexus-libsizenorm-midpoints.bedgraph
-
-comparisons:
-    spt6-1004-37C: WT-37C
-
-diff_exp_and_binding:
-    spt6-1004-37C:
-        WT-37C: ../tss-seq-publication/diff_exp/spt6-1004-37C-v-WT-37C/spikenorm/spt6-1004-37C-v-WT-37C_tss-seq-spikenorm-diffexp-results-all.narrowpeak
-
-tfiib_counts:
-    spt6-1004-37C-1:
-        path: ../chipnexus-tfiib-publication/coverage/counts/spt6-1004-37C-1_tfiib-chipnexus-counts-midpoints.bedgraph
-        group: spt6-1004-37C
-    spt6-1004-37C-2:
-        path: ../chipnexus-tfiib-publication/coverage/counts/spt6-1004-37C-2_tfiib-chipnexus-counts-midpoints.bedgraph
-        group: spt6-1004-37C
-    WT-37C-1:
-        path: ../chipnexus-tfiib-publication/coverage/counts/WT-37C-1_tfiib-chipnexus-counts-midpoints.bedgraph
-        group: WT-37C
-    WT-37C-2:
-        path: ../chipnexus-tfiib-publication/coverage/counts/WT-37C-2_tfiib-chipnexus-counts-midpoints.bedgraph
-        group: WT-37C
-
+fdr_cutoff_tss: 0.1
+fdr_cutoff_tfiib: 0.1
