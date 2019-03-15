@@ -68,7 +68,9 @@ rule match_tfiib_to_tss:
         tfiib_results = nexus_pipe("diff_binding/peaks/{condition}-v-{control}/{tfiib_norm}/{condition}-v-{control}_tfiib-chipnexus-{tfiib_norm}-peaks-diffbind-results-all.tsv"),
         genome_fasta = config["genome"]["fasta"]
     output:
-        "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}.tsv"
+        all = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}.tsv",
+        matched= "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-matched.tsv",
+        unmatched = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-unmatched.tsv",
     params:
         search_distance = config["search_distance"],
         feature_header = lambda wc: "" + \
@@ -82,7 +84,11 @@ rule match_tfiib_to_tss:
         bedtools slop -l {params.search_distance} -r 0 -s -i stdin -g <(faidx -i chromsizes {input.genome_fasta}) | \
         bedtools intersect -loj -a stdin -b <(tail -n +2 {input.tfiib_results}) | \
         cut --complement -f1-6,15,16,18,{params.drop_columns} | \
-        cat <(echo -e "tss_chrom\ttss_start\ttss_end\ttss_name\ttss_score\ttss_strand\ttss_lfc\ttss_lfc_SE\ttss_FDR\ttss_expr_condition\ttss_expr_control\ttss_summit\t{params.feature_header}tfiib_chrom\ttfiib_start\ttfiib_end\ttfiib_name\ttfiib_score\ttfiib_strand\ttfiib_lfc\ttfiib_lfc_SE\ttfiib_FDR\ttfiib_abundance_condition\ttfiib_abundance_control") - > {output}
+        cat <(echo -e "tss_chrom\ttss_start\ttss_end\ttss_name\ttss_score\ttss_strand\ttss_lfc\ttss_lfc_SE\ttss_FDR\ttss_expr_condition\ttss_expr_control\ttss_summit\t{params.feature_header}tfiib_chrom\ttfiib_start\ttfiib_end\ttfiib_name\ttfiib_score\ttfiib_strand\ttfiib_lfc\ttfiib_lfc_SE\ttfiib_FDR\ttfiib_abundance_condition\ttfiib_abundance_control") - | \
+        tee {output.all} | \
+        awk 'BEGIN{{FS=OFS="\t"}} NR==1{{for(i=13; i<=NF-9; i++) {{if($i=="tfiib_start") tfiib_start=i}}}} \
+            (NR>1 && $tfiib_start>=0) {{print $0 > "{output.matched}"}} \
+            (NR>1 && $tfiib_start<0)  {{print $0 > "{output.unmatched}"}}'
         """
 
 rule match_tss_to_tfiib:
@@ -91,7 +97,9 @@ rule match_tss_to_tfiib:
         tss_results = tss_pipe("diff_exp/peaks/{condition}-v-{control}/{tss_norm}/{condition}-v-{control}_tss-seq-{tss_norm}-peaks-diffexp-results-all.tsv"),
         genome_fasta = config["genome"]["fasta"]
     output:
-        "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}.tsv"
+        all = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}.tsv",
+        matched = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-matched.tsv",
+        unmatched = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-unmatched.tsv",
     params:
         search_distance = config["search_distance"],
         feature_header = lambda wc: "" + \
@@ -105,7 +113,11 @@ rule match_tss_to_tfiib:
         bedtools slop -l {params.search_distance} -r {params.search_distance} -i stdin -g <(faidx -i chromsizes {input.genome_fasta}) | \
         bedtools intersect -loj -a stdin -b <(tail -n +2 {input.tss_results}) | \
         cut --complement -f1-6,15,16,18,{params.drop_columns} | \
-        cat <(echo -e "tfiib_chrom\ttfiib_start\ttfiib_end\ttfiib_name\ttfiib_score\ttfiib_strand\ttfiib_lfc\ttfiib_lfc_SE\ttfiib_FDR\ttfiib_abundance_condition\ttfiib_abundance_control\ttfiib_summit\t{params.feature_header}tss_chrom\ttss_start\ttss_end\ttss_name\ttss_score\ttss_strand\ttss_lfc\ttss_lfc_SE\ttss_FDR\ttss_expr_condition\ttss_expr_control") - > {output}
+        cat <(echo -e "tfiib_chrom\ttfiib_start\ttfiib_end\ttfiib_name\ttfiib_score\ttfiib_strand\ttfiib_lfc\ttfiib_lfc_SE\ttfiib_FDR\ttfiib_abundance_condition\ttfiib_abundance_control\ttfiib_summit\t{params.feature_header}tss_chrom\ttss_start\ttss_end\ttss_name\ttss_score\ttss_strand\ttss_lfc\ttss_lfc_SE\ttss_FDR\ttss_expr_condition\ttss_expr_control") - | \
+        tee {output.all} | \
+        awk 'BEGIN{{FS=OFS="\t"}} NR==1{{for(i=13; i<=NF-9; i++) {{if($i=="tss_start") tss_start=i}}}} \
+            (NR>1 && $tss_start>=0) {{print $0 > "{output.matched}"}} \
+            (NR>1 && $tss_start<0)  {{print $0 > "{output.unmatched}"}}'
         """
 
 rule create_tfiib_windows:
