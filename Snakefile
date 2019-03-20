@@ -38,6 +38,7 @@ def get_samples(norm, groups):
 
 wildcard_constraints:
     sample = "|".join(re.escape(x) for x in list(SAMPLES.keys())),
+    distance = "[0-9]+"
 
 localrules:
     target,
@@ -59,8 +60,9 @@ rule target:
     input:
         "config.yaml",
         expand(expand("matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{{category}}/{condition}-v-{control}_{{category}}-tss-seq-{{tss_norm}}-tfiib-{{tfiib_norm}}-matched-peaks-distance{{distance}}.tsv", zip, condition=CONDITIONS, control=CONTROLS), category=CATEGORIES, tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"])),
-        expand(expand("matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{{category}}/{condition}-v-{control}_{{category}}-tss-seq-{{tss_norm}}-tfiib-{{tfiib_norm}}-matched-peaks-distance{{distance}}-{{match}}-up.bed", zip, condition=CONDITIONS, control=CONTROLS), category=CATEGORIES, tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"]), match=["matched", "unmatched"]),
+        expand(expand("matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{{category}}/{condition}-v-{control}_{{category}}-tss-seq-{{tss_norm}}-tfiib-{{tfiib_norm}}-matched-peaks-distance{{distance}}-{{match}}-up-summits.bed", zip, condition=CONDITIONS, control=CONTROLS), category=CATEGORIES, tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"]), match=["matched", "unmatched"]),
         expand(expand("matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{{category}}/{condition}-v-{control}_{{category}}-tfiib-{{tfiib_norm}}-tss-seq-{{tss_norm}}-matched-peaks-distance{{distance}}.tsv", zip, condition=CONDITIONS, control=CONTROLS), category=["genic", "intragenic", "intergenic"], tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"])),
+        expand(expand("matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{{category}}/{condition}-v-{control}_{{category}}-tfiib-{{tfiib_norm}}-tss-seq-{{tss_norm}}-matched-peaks-distance{{distance}}-{{match}}-up-summits.bed", zip, condition=CONDITIONS, control=CONTROLS), category=["genic", "intragenic", "intergenic"], tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"]), match=["matched", "unmatched"]),
         expand(expand("window_diff_binding/{condition}-v-{control}/tss-{{tss_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-window-{{window_size}}-tfiib-chipnexus-{{norm}}-diffbind-results.tsv", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, norm=TFIIB_NORMS, window_size=int(config["window_size"])),
         expand(expand("window_diff_binding/{condition}-v-{control}/tss-{{tss_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-window-{{window_size}}-tfiib-chipnexus-{{norm}}-diffbind-results-{{category}}.tsv", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, norm=TFIIB_NORMS, window_size=int(config["window_size"]), category=CATEGORIES),
         expand(expand("datavis/{condition}-v-{control}/tss-{{tss_norm}}-vs-tfiib-{{tfiib_norm}}/{condition}-v-{control}_tss-{{tss_norm}}-v-tfiib-{{tfiib_norm}}-tfiib-peaks-matched-to-tss-peaks-distance{{distance}}-scatter.svg", zip, condition=CONDITIONS, control=CONTROLS), tss_norm=TSS_NORMS, tfiib_norm=TFIIB_NORMS, distance=int(config["search_distance"]))
@@ -98,17 +100,21 @@ rule separate_matched_tfiib_peaks:
     input:
         "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}.tsv",
     output:
-        up = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-up.bed",
-        down = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-down.bed",
-        nonsig = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-nonsig.bed",
+        up_tsv = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-up.tsv",
+        down_tsv = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-down.tsv",
+        nonsig_tsv = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-nonsig.tsv",
+        up_bed = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-up-summits.bed",
+        down_bed = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-down-summits.bed",
+        nonsig_bed = "matched_peaks/{condition}-v-{control}/tfiib_matched_to_tss/{category}/{condition}-v-{control}_{category}-tss-seq-{tss_norm}-tfiib-{tfiib_norm}-matched-peaks-distance{distance}-{match}-nonsig-summits.bed",
     params:
         fdr_cutoff = -log10(config["fdr_cutoff_tss"])
     shell: """
-        touch {output.up} {output.down} {output.nonsig}
+        touch {output.up_tsv} {output.down_tsv} {output.nonsig_tsv} \
+                {output.up_bed} {output.down_bed} {output.nonsig_bed}
         awk 'BEGIN{{FS=OFS="\t"}} \
-                {{if(NR>1 && $9<={params.fdr_cutoff} && $9!="NA") {{print $1, $2, $3, $4, $5, $6 > "{output.nonsig}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $1, $2, $3, $4, $5, $6 > "{output.up}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7<0 && $9!="NA") {{print $1, $2, $3, $4, $5, $6 > "{output.down}"}}}}' {input}
+                {{if(NR>1 && $9<={params.fdr_cutoff} && $9!="NA") {{print $0 > "{output.nonsig_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.nonsig_bed}"}} \
+                else if(NR>1 && $9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $0 > "{output.up_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.up_bed}"}} \
+                else if(NR>1 && $9>{params.fdr_cutoff} && $7<0 && $9!="NA") {{print $0 > "{output.down_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.down_bed}"}}}}' {input}
         """
 
 rule match_tss_to_tfiib:
@@ -144,17 +150,21 @@ rule separate_matched_tss_peaks:
     input:
         "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}.tsv",
     output:
-        up = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-up.bed",
-        down = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-down.bed",
-        nonsig = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-nonsig.bed",
+        up_tsv = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-up.tsv",
+        down_tsv = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-down.tsv",
+        nonsig_tsv = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-nonsig.tsv",
+        up_bed = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-up-summits.bed",
+        down_bed = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-down-summits.bed",
+        nonsig_bed = "matched_peaks/{condition}-v-{control}/tss_matched_to_tfiib/{category}/{condition}-v-{control}_{category}-tfiib-{tfiib_norm}-tss-seq-{tss_norm}-matched-peaks-distance{distance}-{match}-nonsig-summits.bed",
     params:
         fdr_cutoff = -log10(config["fdr_cutoff_tfiib"])
     shell: """
-        touch {output.up} {output.down} {output.nonsig}
+        touch {output.up_tsv} {output.down_tsv} {output.nonsig_tsv} \
+                {output.up_bed} {output.down_bed} {output.nonsig_bed}
         awk 'BEGIN{{FS=OFS="\t"}} \
-                {{if(NR>1 && $9<={params.fdr_cutoff} && $9!="NA") {{print $1, $2, $3, $4, $5, $6 > "{output.nonsig}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $1, $2, $3, $4, $5, $6 > "{output.up}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7<0 && $9!="NA") {{print $1, $2, $3, $4, $5, $6 > "{output.down}"}}}}' {input}
+                {{if(NR>1 && $9<={params.fdr_cutoff} && $9!="NA") {{print $0 > "{output.nonsig_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.nonsig_bed}"}} \
+                else if(NR>1 && $9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $0 > "{output.up_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.up_bed}"}} \
+                else if(NR>1 && $9>{params.fdr_cutoff} && $7<0 && $9!="NA") {{print $0 > "{output.down_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.down_bed}"}}}}' {input}
         """
 
 rule create_tfiib_windows:
