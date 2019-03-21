@@ -112,9 +112,12 @@ rule separate_matched_tfiib_peaks:
         touch {output.up_tsv} {output.down_tsv} {output.nonsig_tsv} \
                 {output.up_bed} {output.down_bed} {output.nonsig_bed}
         awk 'BEGIN{{FS=OFS="\t"}} \
-                {{if(NR>1 && $9<={params.fdr_cutoff} && $9!="NA") {{print $0 > "{output.nonsig_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.nonsig_bed}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $0 > "{output.up_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.up_bed}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7<0 && $9!="NA") {{print $0 > "{output.down_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.down_bed}"}}}}' {input}
+                NR==1 {{print $0 > "{output.nonsig_tsv}";
+                        print $0 > "{output.up_tsv}";
+                        print $0 > "{output.down_tsv}"}}
+                NR>1 {{if($9<={params.fdr_cutoff} && $9!="NA") {{print $0 > "{output.nonsig_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.nonsig_bed}"}} \
+                       else if($9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $0 > "{output.up_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.up_bed}"}} \
+                       else if($9>{params.fdr_cutoff} && $7<0  && $9!="NA") {{print $0 > "{output.down_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.down_bed}"}}}}' {input}
         """
 
 rule match_tss_to_tfiib:
@@ -159,12 +162,14 @@ rule separate_matched_tss_peaks:
     params:
         fdr_cutoff = -log10(config["fdr_cutoff_tfiib"])
     shell: """
-        touch {output.up_tsv} {output.down_tsv} {output.nonsig_tsv} \
-                {output.up_bed} {output.down_bed} {output.nonsig_bed}
+        touch {output.up_bed} {output.down_bed} {output.nonsig_bed}
         awk 'BEGIN{{FS=OFS="\t"}} \
-                {{if(NR>1 && $9<={params.fdr_cutoff} && $9!="NA") {{print $0 > "{output.nonsig_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.nonsig_bed}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $0 > "{output.up_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.up_bed}"}} \
-                else if(NR>1 && $9>{params.fdr_cutoff} && $7<0 && $9!="NA") {{print $0 > "{output.down_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.down_bed}"}}}}' {input}
+                NR==1 {{print $0 > "{output.nonsig_tsv}";
+                        print $0 > "{output.up_tsv}";
+                        print $0 > "{output.down_tsv}"}}
+                NR>1 {{if($9<={params.fdr_cutoff} && $9!="NA") {{print $0 > "{output.nonsig_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.nonsig_bed}"}} \
+                       else if($9>{params.fdr_cutoff} && $7>=0 && $9!="NA") {{print $0 > "{output.up_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.up_bed}"}} \
+                       else if($9>{params.fdr_cutoff} && $7<0  && $9!="NA") {{print $0 > "{output.down_tsv}"; print $1, $2+$12, $2+$12+1, $4, $5, $6 > "{output.down_bed}"}}}}' {input}
         """
 
 rule create_tfiib_windows:
